@@ -18,8 +18,9 @@ node_modules/
 /playwright/.cache/
 /playwright/.auth/
 
-# Settings (runtime)
+# Settings & Auth (runtime)
 /Data/settings.json
+/Data/auth.json
 
 # OS
 .DS_Store

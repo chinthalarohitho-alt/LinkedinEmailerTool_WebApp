@@ -24,8 +24,11 @@ RUN npm install --prefix client
 COPY . .
 RUN npm run build --prefix client
 
-# Create Data directory
-RUN mkdir -p Data
+# Create Data directory with correct permissions
+RUN mkdir -p Data && chown -R node:node /app
+
+# Run as non-root user
+USER node
 
 EXPOSE 3001
 
