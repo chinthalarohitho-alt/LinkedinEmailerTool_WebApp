@@ -31,13 +31,18 @@ router.get("/stream", (req, res) => {
 // Start scraping
 router.post("/start", (req, res) => {
   const { searchRole } = req.body || {};
+  const linkedInCookie = req.cookies.li_at_token;
 
   if (scraperService.status === "running") {
     return res.status(409).json({ error: "Scraper is already running" });
   }
 
+  if (!linkedInCookie) {
+    return res.status(400).json({ error: "LinkedIn cookie not set. Go to Settings and save your li_at cookie." });
+  }
+
   // Start async — don't await
-  scraperService.start({ searchRole }).catch(() => {});
+  scraperService.start({ searchRole, linkedInCookie }).catch(() => {});
 
   res.json({ message: "Scraper started", status: scraperService.getStatus() });
 });

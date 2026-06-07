@@ -6,19 +6,22 @@ export default function SettingsPanel() {
     emailSubject: "",
     emailUser: "",
     emailPass: "",
-    linkedInCookie: "",
   });
+  const [linkedInCookie, setLinkedInCookie] = useState("");
+  const [hasLinkedInCookie, setHasLinkedInCookie] = useState(false);
   const [template, setTemplate] = useState("");
   const [message, setMessage] = useState(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/settings").then((r) => r.json()),
+      fetch("/api/settings", { credentials: "include" }).then((r) => r.json()),
       fetch("/api/settings/template").then((r) => r.json()),
     ])
       .then(([settingsData, templateData]) => {
-        setSettings(settingsData);
+        const { hasLinkedInCookie: hasCookie, ...rest } = settingsData;
+        setSettings(rest);
+        setHasLinkedInCookie(hasCookie);
         setTemplate(templateData.template || "");
       })
       .catch(() =>
@@ -31,11 +34,17 @@ export default function SettingsPanel() {
     setMessage(null);
 
     try {
+      const body = { ...settings };
+      if (linkedInCookie) {
+        body.linkedInCookie = linkedInCookie;
+      }
+
       const [settingsRes, templateRes] = await Promise.all([
         fetch("/api/settings", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(settings),
+          credentials: "include",
+          body: JSON.stringify(body),
         }),
         fetch("/api/settings/template", {
           method: "PUT",
@@ -45,6 +54,9 @@ export default function SettingsPanel() {
       ]);
 
       if (settingsRes.ok && templateRes.ok) {
+        const data = await settingsRes.json();
+        setHasLinkedInCookie(data.hasLinkedInCookie);
+        setLinkedInCookie("");
         setMessage({ type: "success", text: "All settings saved!" });
       } else {
         setMessage({ type: "error", text: "Failed to save some settings" });
@@ -53,6 +65,19 @@ export default function SettingsPanel() {
       setMessage({ type: "error", text: err.message });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleRemoveCookie = async () => {
+    try {
+      await fetch("/api/settings/linkedin-cookie", {
+        method: "DELETE",
+        credentials: "include",
+      });
+      setHasLinkedInCookie(false);
+      setMessage({ type: "success", text: "LinkedIn cookie removed." });
+    } catch (err) {
+      setMessage({ type: "error", text: err.message });
     }
   };
 
@@ -89,16 +114,40 @@ export default function SettingsPanel() {
 
       <div className="form-group">
         <label>LinkedIn Cookie (li_at)</label>
-        <input
-          type="password"
-          value={settings.linkedInCookie}
-          onChange={(e) =>
-            setSettings((s) => ({ ...s, linkedInCookie: e.target.value }))
-          }
-          placeholder="Paste your li_at cookie value here"
-        />
-        <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: 6 }}>
-          How to get it: Open LinkedIn in Chrome &rarr; F12 &rarr; Application tab &rarr; Cookies &rarr; linkedin.com &rarr; copy the <strong>li_at</strong> value. It lasts ~1 year.
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <input
+            type="password"
+            value={linkedInCookie}
+            onChange={(e) => setLinkedInCookie(e.target.value)}
+            placeholder={hasLinkedInCookie ? "Cookie is set (paste new to replace)" : "Paste your li_at cookie value here"}
+            style={{ flex: 1 }}
+          />
+          {hasLinkedInCookie && (
+            <button
+              className="btn btn-danger btn-sm"
+              onClick={handleRemoveCookie}
+              style={{ whiteSpace: "nowrap" }}
+            >
+              Remove
+            </button>
+          )}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
+          <span
+            style={{
+              display: "inline-block",
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              background: hasLinkedInCookie ? "#22c55e" : "#ef4444",
+            }}
+          ></span>
+          <span style={{ fontSize: "0.75rem", color: hasLinkedInCookie ? "#22c55e" : "#ef4444" }}>
+            {hasLinkedInCookie ? "Cookie is securely stored" : "No cookie set"}
+          </span>
+        </div>
+        <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: 4 }}>
+          How to get it: Open LinkedIn in Chrome &rarr; F12 &rarr; Application tab &rarr; Cookies &rarr; linkedin.com &rarr; copy the <strong>li_at</strong> value. Stored as httpOnly cookie (cannot be stolen by scripts).
         </div>
       </div>
 

@@ -14,7 +14,6 @@ function loadSettings() {
       "Application - QA / Software Testing Role",
     emailUser: process.env.EMAIL_USER || "",
     emailPass: process.env.EMAIL_PASS || "",
-    linkedInCookie: process.env.LINKEDIN_COOKIE || "",
   };
 
   if (fs.existsSync(SETTINGS_FILE)) {
@@ -27,20 +26,45 @@ function loadSettings() {
 }
 
 function saveSettings(settings) {
-  fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2));
+  // Never save linkedInCookie to disk
+  const { linkedInCookie, ...safe } = settings;
+  fs.writeFileSync(SETTINGS_FILE, JSON.stringify(safe, null, 2));
 }
 
 // Get settings
 router.get("/", (req, res) => {
-  res.json(loadSettings());
+  const settings = loadSettings();
+  // Tell frontend if LinkedIn cookie is set (without revealing the value)
+  settings.hasLinkedInCookie = !!req.cookies.li_at_token;
+  res.json(settings);
 });
 
 // Update settings
 router.put("/", (req, res) => {
+  const { linkedInCookie, ...rest } = req.body;
+
+  // Save non-sensitive settings to file
   const current = loadSettings();
-  const updated = { ...current, ...req.body };
+  const updated = { ...current, ...rest };
   saveSettings(updated);
-  res.json(updated);
+
+  // Store LinkedIn cookie as httpOnly browser cookie (can't be read by JS)
+  if (linkedInCookie) {
+    res.cookie("li_at_token", linkedInCookie, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year
+    });
+  }
+
+  res.json({ ...updated, hasLinkedInCookie: !!(linkedInCookie || req.cookies.li_at_token) });
+});
+
+// Clear LinkedIn cookie
+router.delete("/linkedin-cookie", (req, res) => {
+  res.clearCookie("li_at_token");
+  res.json({ message: "LinkedIn cookie removed" });
 });
 
 // Get email template

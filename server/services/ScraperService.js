@@ -6,7 +6,6 @@ const sentEmailManager = require("../../utils/SentEmailManager");
 
 const DATA_DIR = path.join(__dirname, "../../Data");
 const EMAILS_FILE_PATH = path.join(DATA_DIR, "Emails.txt");
-const SETTINGS_FILE = path.join(DATA_DIR, "settings.json");
 
 class ScraperService extends EventEmitter {
   constructor() {
@@ -22,16 +21,7 @@ class ScraperService extends EventEmitter {
     this.emit("log", line);
   }
 
-  _loadSettings() {
-    try {
-      if (fs.existsSync(SETTINGS_FILE)) {
-        return JSON.parse(fs.readFileSync(SETTINGS_FILE, "utf-8"));
-      }
-    } catch (e) {}
-    return {};
-  }
-
-  async start({ searchRole = "QA role" } = {}) {
+  async start({ searchRole = "QA role", linkedInCookie } = {}) {
     if (this.status === "running") {
       throw new Error("Scraper is already running");
     }
@@ -41,7 +31,7 @@ class ScraperService extends EventEmitter {
     this.stats = { totalEmails: 0, newEmails: 0, cycles: 0 };
 
     try {
-      await this._run(searchRole);
+      await this._run(searchRole, linkedInCookie);
       this.status = this.stopping ? "idle" : "done";
     } catch (err) {
       this.status = "error";
@@ -66,10 +56,7 @@ class ScraperService extends EventEmitter {
     this.log("Scraper stopped.");
   }
 
-  async _run(searchRole) {
-    const settings = this._loadSettings();
-    const linkedInCookie = settings.linkedInCookie || process.env.LINKEDIN_COOKIE || "";
-
+  async _run(searchRole, linkedInCookie) {
     if (!linkedInCookie) {
       throw new Error(
         "LinkedIn cookie (li_at) not configured. Go to Settings and paste your li_at cookie value."

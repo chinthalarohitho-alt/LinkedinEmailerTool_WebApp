@@ -63,6 +63,7 @@ export default function ScraperPanel() {
       const res = await fetch("/api/scrape/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           searchRole: settings.searchRole,
         }),
