@@ -10,7 +10,7 @@
     "dev": "concurrently \"node server/index.js\" \"npm run dev --prefix client\"",
     "server": "node server/index.js",
     "client": "npm run dev --prefix client",
-    "build": "npm install --prefix client && npm run build --prefix client && npx playwright install chromium --with-deps",
+    "build": "npm install --prefix client && npm run build --prefix client && npx playwright install chromium",
     "start": "node server/index.js",
     "test": "playwright test",
     "scrape": "playwright test test/LinkedInPersistent.spec.ts --headed",
