@@ -10,11 +10,14 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
+# Set Playwright browser path to a fixed location
+ENV PLAYWRIGHT_BROWSERS_PATH=/app/.playwright-browsers
+
 # Install root dependencies
 COPY package*.json ./
 RUN npm install
 
-# Install Playwright Chromium (no sudo needed)
+# Install Playwright Chromium to the fixed path
 RUN npx playwright install chromium
 
 # Install and build client
