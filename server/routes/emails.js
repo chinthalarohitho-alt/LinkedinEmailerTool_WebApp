@@ -55,7 +55,12 @@ router.post("/send", async (req, res) => {
   emailService.on("log", onLog);
 
   try {
-    const results = await emailService.sendAll();
+    const results = await emailService.sendAll({
+      emailUser: req.cookies.email_user,
+      emailPass: req.cookies.email_pass,
+      emailSubject: req.cookies.email_subject,
+      emailTemplate: req.cookies.email_template,
+    });
     emailService.off("log", onLog);
     res.json({ ...results, logs });
   } catch (err) {

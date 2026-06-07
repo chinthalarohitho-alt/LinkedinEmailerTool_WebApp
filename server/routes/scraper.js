@@ -30,7 +30,7 @@ router.get("/stream", (req, res) => {
 
 // Start scraping
 router.post("/start", (req, res) => {
-  const { searchRole } = req.body || {};
+  const searchRole = req.body?.searchRole || req.cookies.search_role;
   const linkedInCookie = req.cookies.li_at_token;
 
   if (scraperService.status === "running") {

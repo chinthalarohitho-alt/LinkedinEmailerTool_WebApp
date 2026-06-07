@@ -6,7 +6,6 @@ const sentEmailManager = require("../../utils/SentEmailManager");
 
 const DATA_DIR = path.join(__dirname, "../../Data");
 const EMAILS_FILE_PATH = path.join(DATA_DIR, "Emails.txt");
-const TEMPLATE_PATH = path.join(DATA_DIR, "EmailTemplate.txt");
 
 class EmailService extends EventEmitter {
   constructor() {
@@ -33,7 +32,7 @@ class EmailService extends EventEmitter {
     return resumePath;
   }
 
-  async sendAll() {
+  async sendAll({ emailUser, emailPass, emailSubject, emailTemplate } = {}) {
     if (this.sending) {
       throw new Error("Already sending emails");
     }
@@ -42,17 +41,8 @@ class EmailService extends EventEmitter {
     const results = { sent: 0, failed: 0, total: 0 };
 
     try {
-      // Load credentials from settings file, fall back to .env
-      const settingsFile = path.join(DATA_DIR, "settings.json");
-      let savedSettings = {};
-      try {
-        if (fs.existsSync(settingsFile)) {
-          savedSettings = JSON.parse(fs.readFileSync(settingsFile, "utf-8"));
-        }
-      } catch (e) {}
-
-      const user = savedSettings.emailUser || process.env.EMAIL_USER;
-      const pass = savedSettings.emailPass || process.env.EMAIL_PASS;
+      const user = emailUser || process.env.EMAIL_USER;
+      const pass = emailPass || process.env.EMAIL_PASS;
 
       if (!user || !pass || pass === "your_google_app_password_here") {
         throw new Error(
@@ -84,18 +74,8 @@ class EmailService extends EventEmitter {
         return results;
       }
 
-      // Load template
-      let body = "";
-      if (fs.existsSync(TEMPLATE_PATH)) {
-        body = fs.readFileSync(TEMPLATE_PATH, "utf-8");
-      } else {
-        body = (process.env.EMAIL_BODY || "").replace(/\\n/g, "\n");
-      }
-
-      const subject =
-        savedSettings.emailSubject ||
-        process.env.EMAIL_SUBJECT ||
-        "Application - QA / Software Testing Role";
+      const body = emailTemplate || (process.env.EMAIL_BODY || "").replace(/\\n/g, "\n");
+      const subject = emailSubject || process.env.EMAIL_SUBJECT || "Application - QA / Software Testing Role";
       const resumePath = this._discoverResume();
 
       this.log(`Sending ${uniqueEmails.length} emails...`);

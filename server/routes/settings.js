@@ -1,97 +1,71 @@
 const express = require("express");
 const router = express.Router();
-const fs = require("fs");
-const path = require("path");
 
-const TEMPLATE_PATH = path.join(__dirname, "../../Data/EmailTemplate.txt");
-const SETTINGS_FILE = path.join(__dirname, "../../Data/settings.json");
+const COOKIE_OPTS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "strict",
+  maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year
+};
 
-function loadSettings() {
-  const defaults = {
-    searchRole: process.env.LINKEDIN_SEARCH_ROLE || "QA role",
-    emailSubject:
-      process.env.EMAIL_SUBJECT ||
-      "Application - QA / Software Testing Role",
-    emailUser: process.env.EMAIL_USER || "",
-    emailPass: process.env.EMAIL_PASS || "",
-  };
+// All settings stored as browser cookies — nothing on server disk
 
-  if (fs.existsSync(SETTINGS_FILE)) {
-    try {
-      const saved = JSON.parse(fs.readFileSync(SETTINGS_FILE, "utf-8"));
-      return { ...defaults, ...saved };
-    } catch (e) {}
-  }
-  return defaults;
-}
-
-function saveSettings(settings) {
-  // Never save linkedInCookie to disk
-  const { linkedInCookie, ...safe } = settings;
-  fs.writeFileSync(SETTINGS_FILE, JSON.stringify(safe, null, 2));
-}
-
-// Get settings
+// Get settings (read from cookies)
 router.get("/", (req, res) => {
-  const settings = loadSettings();
-  // Tell frontend if LinkedIn cookie is set (without revealing the value)
-  settings.hasLinkedInCookie = !!req.cookies.li_at_token;
-  res.json(settings);
+  res.json({
+    searchRole: req.cookies.search_role || process.env.LINKEDIN_SEARCH_ROLE || "QA role",
+    emailSubject: req.cookies.email_subject || process.env.EMAIL_SUBJECT || "Application - QA / Software Testing Role",
+    hasLinkedInCookie: !!req.cookies.li_at_token,
+    hasEmailUser: !!req.cookies.email_user,
+    hasEmailPass: !!req.cookies.email_pass,
+    hasTemplate: !!req.cookies.email_template,
+  });
 });
 
-// Update settings
+// Update settings (save to cookies)
 router.put("/", (req, res) => {
-  const { linkedInCookie, ...rest } = req.body;
+  const { linkedInCookie, emailUser, emailPass, searchRole, emailSubject } = req.body;
 
-  // Save non-sensitive settings to file
-  const current = loadSettings();
-  const updated = { ...current, ...rest };
-  saveSettings(updated);
+  if (searchRole) res.cookie("search_role", searchRole, COOKIE_OPTS);
+  if (emailSubject) res.cookie("email_subject", emailSubject, COOKIE_OPTS);
+  if (linkedInCookie) res.cookie("li_at_token", linkedInCookie, COOKIE_OPTS);
+  if (emailUser) res.cookie("email_user", emailUser, COOKIE_OPTS);
+  if (emailPass) res.cookie("email_pass", emailPass, COOKIE_OPTS);
 
-  // Store LinkedIn cookie as httpOnly browser cookie (can't be read by JS)
-  if (linkedInCookie) {
-    res.cookie("li_at_token", linkedInCookie, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year
-    });
-  }
-
-  res.json({ ...updated, hasLinkedInCookie: !!(linkedInCookie || req.cookies.li_at_token) });
+  res.json({
+    searchRole: searchRole || req.cookies.search_role || "QA role",
+    emailSubject: emailSubject || req.cookies.email_subject || "",
+    hasLinkedInCookie: !!(linkedInCookie || req.cookies.li_at_token),
+    hasEmailUser: !!(emailUser || req.cookies.email_user),
+    hasEmailPass: !!(emailPass || req.cookies.email_pass),
+    hasTemplate: !!req.cookies.email_template,
+  });
 });
 
-// Clear LinkedIn cookie
-router.delete("/linkedin-cookie", (req, res) => {
+// Clear all credentials
+router.delete("/credentials", (req, res) => {
   res.clearCookie("li_at_token");
-  res.json({ message: "LinkedIn cookie removed" });
+  res.clearCookie("email_user");
+  res.clearCookie("email_pass");
+  res.clearCookie("search_role");
+  res.clearCookie("email_subject");
+  res.clearCookie("email_template");
+  res.json({ message: "All credentials and settings removed" });
 });
 
-// Get email template
+// Get email template (from cookie)
 router.get("/template", (req, res) => {
-  try {
-    if (fs.existsSync(TEMPLATE_PATH)) {
-      const template = fs.readFileSync(TEMPLATE_PATH, "utf-8");
-      res.json({ template });
-    } else {
-      res.json({ template: "" });
-    }
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  const template = req.cookies.email_template || "";
+  res.json({ template });
 });
 
-// Update email template
+// Update email template (save to cookie)
 router.put("/template", (req, res) => {
-  try {
-    const { template } = req.body;
-    const dir = path.dirname(TEMPLATE_PATH);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(TEMPLATE_PATH, template);
-    res.json({ message: "Template saved", template });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  const { template } = req.body;
+  if (template !== undefined) {
+    res.cookie("email_template", template, COOKIE_OPTS);
   }
+  res.json({ message: "Template saved", template });
 });
 
 module.exports = router;
