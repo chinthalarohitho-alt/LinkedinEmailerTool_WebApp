@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import LoginScreen from "./components/LoginScreen";
+import { useState } from "react";
 import Dashboard from "./components/Dashboard";
 import ScraperPanel from "./components/ScraperPanel";
 import SettingsPanel from "./components/SettingsPanel";
@@ -11,33 +10,7 @@ const TABS = [
 ];
 
 export default function App() {
-  const [authenticated, setAuthenticated] = useState(false);
-  const [checking, setChecking] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
-
-  useEffect(() => {
-    fetch("/api/auth/status", { credentials: "include" })
-      .then((r) => r.json())
-      .then((data) => {
-        setAuthenticated(data.authenticated);
-        setChecking(false);
-      })
-      .catch(() => setChecking(false));
-  }, []);
-
-  const handleLogout = async () => {
-    await fetch("/api/auth/logout", {
-      method: "POST",
-      credentials: "include",
-    });
-    setAuthenticated(false);
-  };
-
-  if (checking) return null;
-
-  if (!authenticated) {
-    return <LoginScreen onAuth={() => setAuthenticated(true)} />;
-  }
 
   const renderTab = () => {
     switch (activeTab) {
@@ -55,12 +28,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <h1 style={{ marginBottom: 0 }}>LinkedIn Emailer Tool</h1>
-          <button className="btn btn-secondary btn-sm" onClick={handleLogout}>
-            Logout
-          </button>
-        </div>
+        <h1>LinkedIn Emailer Tool</h1>
         <nav className="tab-nav">
           {TABS.map((tab) => (
             <button

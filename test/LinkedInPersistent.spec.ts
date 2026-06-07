@@ -76,6 +76,7 @@ test("LinkedIn Persistent Scrape", async () => {
 
     console.log(`Navigating to target results (filtered by Past 24h)...`);
     await page.goto(searchUrl, { waitUntil: "load" });
+    await page.waitForSelector('[data-testid="lazy-column"]', { timeout: 15000 }).catch(() => {});
     await page.waitForTimeout(3000);
 
     // Close banners
@@ -113,7 +114,7 @@ test("LinkedIn Persistent Scrape", async () => {
     for (let i = 0; i < 25; i++) {
       console.log(`\n--- Cycle ${i + 1}/25 ---`);
       const posts = page.locator(
-        'div[data-view-name="feed-full-update"], li.reusable-search__result-container, article',
+        'div[data-testid="lazy-column"] > div div[role="listitem"]',
       );
       const currentCount = await posts.count();
       console.log(`Total posts visible: ${currentCount}`);
@@ -124,10 +125,10 @@ test("LinkedIn Persistent Scrape", async () => {
         const post = posts.nth(j);
         try {
           // Expand "more" if present
-          const moreBtn = post.locator("xpath=.//span[text()=' more']");
+          const moreBtn = post.locator('[data-testid="expandable-text-button"]');
           if ((await moreBtn.count()) > 0 && (await moreBtn.isVisible())) {
             await moreBtn.click({ force: true }).catch(() => {});
-            await page.waitForTimeout(300); // Shorter wait for expansion
+            await page.waitForTimeout(300);
           }
         } catch (e) {}
 

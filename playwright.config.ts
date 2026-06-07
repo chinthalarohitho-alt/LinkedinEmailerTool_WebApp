@@ -26,7 +26,9 @@ export default defineConfig({
     {
       name: "LinkedIn Scraper",
       use: {
-        channel: "chrome",
+        launchOptions: {
+          executablePath: "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
+        },
       },
     },
   ],

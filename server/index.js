@@ -9,8 +9,6 @@ require("dotenv").config({ path: path.join(__dirname, "../.env") });
 const scraperRoutes = require("./routes/scraper");
 const emailRoutes = require("./routes/emails");
 const settingsRoutes = require("./routes/settings");
-const authRoutes = require("./routes/auth");
-const { authMiddleware } = require("./middleware/auth");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -38,18 +36,11 @@ const apiLimiter = rateLimit({
   message: { error: "Too many requests, please try again later." },
 });
 
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10, // Stricter for login attempts
-  message: { error: "Too many login attempts, try again later." },
-});
-
 // CORS — same origin only (no external domains)
 app.use(
   cors({
     credentials: true,
     origin: function (origin, callback) {
-      // Allow same-origin requests (origin is undefined) and requests from the app itself
       if (!origin) return callback(null, true);
       const allowed = [
         `http://localhost:${PORT}`,
@@ -62,21 +53,18 @@ app.use(
   })
 );
 
-app.use(express.json({ limit: "1mb" })); // Limit body size
+app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 
-// Auth routes (no auth required)
-app.use("/api/auth", authLimiter, authRoutes);
-
-// Health check (no auth required)
+// Health check
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
-// Protected API routes
-app.use("/api/scrape", apiLimiter, authMiddleware, scraperRoutes);
-app.use("/api/emails", apiLimiter, authMiddleware, emailRoutes);
-app.use("/api/settings", apiLimiter, authMiddleware, settingsRoutes);
+// API routes (rate limited)
+app.use("/api/scrape", apiLimiter, scraperRoutes);
+app.use("/api/emails", apiLimiter, emailRoutes);
+app.use("/api/settings", apiLimiter, settingsRoutes);
 
 // Serve React build in production
 const clientBuild = path.join(__dirname, "../client/dist");
