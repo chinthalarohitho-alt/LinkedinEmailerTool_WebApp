@@ -18,6 +18,9 @@ node_modules/
 /playwright/.cache/
 /playwright/.auth/
 
+# Settings (runtime)
+/Data/settings.json
+
 # OS
 .DS_Store
 Thumbs.db

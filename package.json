@@ -1,15 +1,20 @@
 {
   "name": "linkedinemailertool",
-  "version": "1.0.0",
-  "description": "A robust tool built with Playwright and Node.js to scrape LinkedIn posts for job opportunities (specifically QA/SDET roles) and automatically send application emails with resumes to discovered email addresses.",
-  "main": "EmailSender.js",
+  "version": "2.0.0",
+  "description": "A web-based tool built with React, Express, Playwright and Node.js to scrape LinkedIn posts for job opportunities and automatically send application emails with resumes.",
+  "main": "server/index.js",
   "directories": {
     "test": "test"
   },
   "scripts": {
+    "dev": "concurrently \"node server/index.js\" \"npm run dev --prefix client\"",
+    "server": "node server/index.js",
+    "client": "npm run dev --prefix client",
+    "build": "npm install --prefix client && npm run build --prefix client && npx playwright install chromium --with-deps",
+    "start": "node server/index.js",
     "test": "playwright test",
     "scrape": "playwright test test/LinkedInPersistent.spec.ts --headed",
-    "send": "node EmailSender.js"
+    "send": "node utils/EmailSender.js"
   },
   "repository": {
     "type": "git",
@@ -25,7 +30,11 @@
   "homepage": "https://github.com/chinthalarohitho-alt/LinkedinEmailerTool#readme",
   "dependencies": {
     "@playwright/test": "^1.58.2",
+    "concurrently": "^9.1.2",
+    "cors": "^2.8.5",
     "dotenv": "^17.2.4",
-    "nodemailer": "^8.0.1"
+    "express": "^5.1.0",
+    "nodemailer": "^8.0.1",
+    "playwright": "^1.52.0"
   }
 }
