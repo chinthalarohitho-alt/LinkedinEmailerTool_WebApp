@@ -1,22 +1,23 @@
 import { useState, useEffect, useRef } from "react";
 
+const fetchWithCreds = (url, opts = {}) =>
+  fetch(url, { credentials: "include", ...opts });
+
 export default function ScraperPanel() {
   const [status, setStatus] = useState("idle");
   const [stats, setStats] = useState({});
   const [logs, setLogs] = useState([]);
-  const [settings, setSettings] = useState({ searchRole: "QA role", headless: false });
+  const [settings, setSettings] = useState({ searchRole: "QA role" });
   const logEndRef = useRef(null);
   const eventSourceRef = useRef(null);
 
   useEffect(() => {
-    // Load settings
-    fetch("/api/settings")
+    fetchWithCreds("/api/settings")
       .then((r) => r.json())
       .then(setSettings)
       .catch(() => {});
 
-    // Load current status
-    fetch("/api/scrape/status")
+    fetchWithCreds("/api/scrape/status")
       .then((r) => r.json())
       .then((data) => {
         setStatus(data.status);
@@ -24,7 +25,6 @@ export default function ScraperPanel() {
       })
       .catch(() => {});
 
-    // Connect SSE
     connectSSE();
     return () => {
       if (eventSourceRef.current) eventSourceRef.current.close();
@@ -34,7 +34,7 @@ export default function ScraperPanel() {
   const connectSSE = () => {
     if (eventSourceRef.current) eventSourceRef.current.close();
 
-    const es = new EventSource("/api/scrape/stream");
+    const es = new EventSource("/api/scrape/stream", { withCredentials: true });
     eventSourceRef.current = es;
 
     es.onmessage = (event) => {
@@ -60,13 +60,10 @@ export default function ScraperPanel() {
   const handleStart = async () => {
     setLogs([]);
     try {
-      const res = await fetch("/api/scrape/start", {
+      const res = await fetchWithCreds("/api/scrape/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          searchRole: settings.searchRole,
-        }),
+        body: JSON.stringify({ searchRole: settings.searchRole }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -81,7 +78,7 @@ export default function ScraperPanel() {
 
   const handleViewEmails = async () => {
     try {
-      const res = await fetch("/api/emails");
+      const res = await fetchWithCreds("/api/emails");
       const data = await res.json();
       const emails = data.emails || [];
       const time = new Date().toLocaleTimeString();
@@ -102,12 +99,18 @@ export default function ScraperPanel() {
 
   const handleSendOnly = async () => {
     try {
-      setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] Sending emails only (no scraping)...`]);
-      const res = await fetch("/api/emails/send", { method: "POST" });
+      setLogs((prev) => [
+        ...prev,
+        `[${new Date().toLocaleTimeString()}] Sending emails only (no scraping)...`,
+      ]);
+      const res = await fetchWithCreds("/api/emails/send", { method: "POST" });
       const data = await res.json();
       if (res.ok) {
         if (data.logs) data.logs.forEach((l) => setLogs((prev) => [...prev, l]));
-        setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] Done. Sent: ${data.sent}, Failed: ${data.failed}`]);
+        setLogs((prev) => [
+          ...prev,
+          `[${new Date().toLocaleTimeString()}] Done. Sent: ${data.sent}, Failed: ${data.failed}`,
+        ]);
       } else {
         setLogs((prev) => [...prev, `Error: ${data.error}`]);
       }
@@ -118,7 +121,7 @@ export default function ScraperPanel() {
 
   const handleStop = async () => {
     try {
-      await fetch("/api/scrape/stop", { method: "POST" });
+      await fetchWithCreds("/api/scrape/stop", { method: "POST" });
       setStatus("idle");
     } catch (err) {
       setLogs((prev) => [...prev, `Error: ${err.message}`]);
@@ -174,10 +177,7 @@ export default function ScraperPanel() {
             Stop Scraping
           </button>
         )}
-        <button
-          className="btn btn-secondary"
-          onClick={handleViewEmails}
-        >
+        <button className="btn btn-secondary" onClick={handleViewEmails}>
           View Emails
         </button>
         <button

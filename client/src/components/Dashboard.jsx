@@ -11,9 +11,9 @@ export default function Dashboard({ onNavigate }) {
   const fetchAll = async () => {
     try {
       const [emailsRes, sentRes, statusRes] = await Promise.all([
-        fetch("/api/emails"),
-        fetch("/api/emails/sent"),
-        fetch("/api/scrape/status"),
+        fetch("/api/emails", { credentials: "include" }),
+        fetch("/api/emails/sent", { credentials: "include" }),
+        fetch("/api/scrape/status", { credentials: "include" }),
       ]);
       const emailsData = await emailsRes.json();
       const sentData = await sentRes.json();
@@ -37,7 +37,7 @@ export default function Dashboard({ onNavigate }) {
   const handleDelete = async (email) => {
     try {
       await fetch(`/api/emails/${encodeURIComponent(email)}`, {
-        method: "DELETE",
+        method: "DELETE", credentials: "include",
       });
       setEmails((prev) => prev.filter((e) => e !== email));
     } catch (err) {
@@ -56,7 +56,7 @@ export default function Dashboard({ onNavigate }) {
     setSending(true);
     setMessage(null);
     try {
-      const res = await fetch("/api/emails/send", { method: "POST" });
+      const res = await fetch("/api/emails/send", { method: "POST", credentials: "include" });
       const data = await res.json();
       if (res.ok) {
         setMessage({
