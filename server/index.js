@@ -2,7 +2,6 @@ const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const helmet = require("helmet");
-const rateLimit = require("express-rate-limit");
 const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, "../.env") });
 
@@ -28,13 +27,6 @@ app.use(
     },
   })
 );
-
-// Rate limiting
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
-  message: { error: "Too many requests, please try again later." },
-});
 
 // CORS — same origin only (no external domains)
 app.use(
@@ -62,9 +54,9 @@ app.get("/api/health", (req, res) => {
 });
 
 // API routes (rate limited)
-app.use("/api/scrape", apiLimiter, scraperRoutes);
-app.use("/api/emails", apiLimiter, emailRoutes);
-app.use("/api/settings", apiLimiter, settingsRoutes);
+app.use("/api/scrape", scraperRoutes);
+app.use("/api/emails", emailRoutes);
+app.use("/api/settings", settingsRoutes);
 
 // Serve React build in production
 const clientBuild = path.join(__dirname, "../client/dist");
